@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>chuja — stem console</title>
+<style>
+  /* ============================================================
+     chuja // analog stem console
+     Skeuomorphic rack-gear aesthetic. Monospace instrument face.
+     ============================================================ */
+  :root {
+    --bg:        #0a0b0c;
+    --panel:     #16181b;
+    --panel-hi:  #23262b;
+    --panel-lo:  #0d0e10;
+    --etch:      #34383e;
+    --ink:       #d7dbe0;
+    --ink-dim:   #767c85;
+    --ink-faint: #474c54;
+    --screen:    #07090a;
+    --line:      #1f2329;
+    --amber:     #ff6b35;
+    --cyan:      #29d3c2;
+    --violet:    #b56bff;
+    --lime:      #c6f135;
+    --red:       #ff3b30;
+    --green:     #46e08a;
+    --mono: "SF Mono","JetBrains Mono","Menlo","Consolas",ui-monospace,monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.02em;
+    overflow-x: hidden;
+  }
+  /* film grain + faint vignette over everything */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    opacity: 0.035; mix-blend-mode: overlay;
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+    background: radial-gradient(120% 90% at 50% -10%, transparent 55%, rgba(0,0,0,0.55) 100%);
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 26px 22px 80px; }
+
+  /* ---- shared panel (rack-gear face) ---- */
+  .panel {
+    position: relative;
+    background:
+      linear-gradient(180deg, var(--panel-hi) 0%, var(--panel) 8%, var(--panel) 92%, var(--panel-lo) 100%);
+    border: 1px solid #000;
+    border-radius: 7px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      inset 0 0 0 1px rgba(255,255,255,0.015),
+      0 10px 24px rgba(0,0,0,0.5);
+  }
+  /* corner screws */
+  .panel.screws::before, .panel.screws::after,
+  .panel.screws > .scr-l, .panel.screws > .scr-r { content:""; }
+  .screw {
+    position: absolute; width: 11px; height: 11px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #3a3e44, #15171a 70%);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6), 0 1px 1px rgba(255,255,255,0.05);
+  }
+  .screw::after {
+    content:""; position:absolute; inset:3px; border-top:1px solid #05060700;
+    background: linear-gradient(90deg, transparent 44%, #050607 44%, #050607 56%, transparent 56%);
+    transform: rotate(35deg); opacity: 0.7;
+  }
+  .screw.tl{ top:8px; left:8px } .screw.tr{ top:8px; right:8px }
+  .screw.bl{ bottom:8px; left:8px } .screw.br{ bottom:8px; right:8px }
+
+  /* ---- masthead ---- */
+  .masthead {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 22px; margin-bottom: 18px;
+  }
+  .brand { display:flex; align-items:baseline; gap:14px; }
+  .wordmark {
+    font-size: 23px; font-weight: 700; letter-spacing: 0.42em;
+    text-transform: uppercase; color: var(--ink);
+    text-shadow: 0 1px 0 #000, 0 0 18px rgba(255,107,53,0.18);
+    padding-left: 0.42em;
+  }
+  .wordmark b { color: var(--amber); }
+  .tagline { color: var(--ink-faint); font-size: 10px; letter-spacing: 0.34em; text-transform: uppercase; }
+  .powerled {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--amber);
+    box-shadow: 0 0 8px var(--amber), 0 0 2px #fff inset; animation: pulse 3.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+
+  /* ============ INTAKE ============ */
+  .intake { padding: 30px; }
+  .intake .hdr {
+    display:flex; justify-content:space-between; align-items:center;
+    border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px;
+  }
+  .section-id { color: var(--ink-dim); font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; }
+  .drop {
+    border: 1.5px dashed var(--etch); border-radius: 6px;
+    padding: 40px 20px; text-align: center; cursor: pointer;
+    background: linear-gradient(180deg, rgba(255,255,255,0.012), transparent);
+    transition: border-color .18s, background .18s, transform .18s;
+  }
+  .drop:hover { border-color: var(--amber); background: rgba(255,107,53,0.04); }
+  .drop.hot { border-color: var(--amber); background: rgba(255,107,53,0.08); transform: scale(1.005); }
+  .drop .big { font-size: 15px; letter-spacing: 0.06em; color: var(--ink); }
+  .drop .sub { color: var(--ink-dim); font-size: 11px; margin-top: 8px; }
+  .drop .glyph { font-size: 30px; color: var(--amber); margin-bottom: 12px; opacity: .9; }
+
+  .or { text-align:center; color: var(--ink-faint); font-size: 10px; letter-spacing: 0.3em; margin: 18px 0; }
+  .or span { background: var(--panel); padding: 0 12px; }
+  .or { position: relative; }
+  .or::before { content:""; position:absolute; left:0; right:0; top:50%; height:1px; background: var(--line); z-index:0; }
+  .or span { position: relative; z-index:1; }
+
+  .urlrow { display:flex; gap:10px; }
+  input[type=text] {
+    flex:1; background: var(--screen); border: 1px solid var(--line);
+    border-radius: 5px; color: var(--ink); font-family: var(--mono); font-size: 13px;
+    padding: 12px 14px; letter-spacing: 0.02em;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.6);
+  }
+  input[type=text]:focus { outline:none; border-color: var(--amber); box-shadow: inset 0 1px 3px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,107,53,.3); }
+  input[type=text]::placeholder { color: var(--ink-faint); }
+
+  .opts { display:flex; flex-wrap:wrap; gap:22px; margin-top:24px; padding-top:20px; border-top:1px solid var(--line); }
+  .opt { display:flex; flex-direction:column; gap:7px; }
+  .opt label { font-size: 9.5px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--ink-dim); }
+  .segbar { display:flex; border:1px solid var(--line); border-radius:5px; overflow:hidden; }
+  .seg {
+    padding: 8px 13px; font-size: 11px; cursor:pointer; color: var(--ink-dim);
+    background: var(--panel-lo); border-right:1px solid var(--line); letter-spacing:0.04em;
+    transition: all .14s; user-select:none;
+  }
+  .seg:last-child { border-right:none; }
+  .seg:hover { color: var(--ink); }
+  .seg.on { background: var(--amber); color:#1a0c05; font-weight:700; text-shadow:none; }
+
+  .go {
+    margin-top: 26px; width:100%; padding: 15px; cursor:pointer;
+    background: linear-gradient(180deg, #ff7d4d, var(--amber)); color:#1a0c05;
+    border:1px solid #b8431d; border-radius:6px; font-family:var(--mono);
+    font-size: 13px; font-weight:700; letter-spacing: 0.22em; text-transform: uppercase;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 14px rgba(255,107,53,0.25);
+    transition: transform .1s, box-shadow .15s;
+  }
+  .go:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 6px 20px rgba(255,107,53,0.4); }
+  .go:active { transform: translateY(1px); }
+  .go:disabled { opacity:.4; cursor:not-allowed; }
+
+  .filechip {
+    margin-top:14px; display:none; align-items:center; gap:10px; font-size:12px;
+    color: var(--ink); background: var(--panel-lo); border:1px solid var(--line);
+    border-radius:5px; padding:9px 12px;
+  }
+  .filechip .x { margin-left:auto; cursor:pointer; color:var(--ink-dim); }
+  .filechip .x:hover { color: var(--red); }
+
+  /* ============ PROGRESS ============ */
+  .progress { padding: 34px; display:none; }
+  .progress.show { display:block; }
+  .stages { display:flex; gap: 0; margin: 8px 0 26px; }
+  .stage { flex:1; text-align:center; position:relative; }
+  .stage .led {
+    width:12px;height:12px;border-radius:50%;margin:0 auto 10px;
+    background: var(--panel-lo); box-shadow: inset 0 0 0 1px #000;
+    transition: all .3s;
+  }
+  .stage.active .led { background: var(--amber); box-shadow: 0 0 12px var(--amber), inset 0 0 0 1px #000; }
+  .stage.done .led { background: var(--green); box-shadow: 0 0 8px var(--green), inset 0 0 0 1px #000; }
+  .stage .lbl { font-size: 9.5px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-dim); }
+  .stage.active .lbl { color: var(--ink); }
+  .stage::after { content:""; position:absolute; top:6px; left:60%; right:-40%; height:1px; background: var(--line); }
+  .stage:last-child::after { display:none; }
+
+  .barrow { display:flex; align-items:center; gap:12px; }
+  .bar { flex:1; height: 6px; border-radius: 3px; background: var(--screen); overflow:hidden; box-shadow: inset 0 1px 2px #000; }
+  .bar > i {
+    display:block; height:100%; width:0%; border-radius:3px;
+    background: linear-gradient(90deg, var(--amber), #ffb38f);
+    box-shadow: 0 0 10px rgba(255,107,53,.5);
+    transition: width .35s ease;
+  }
+  /* indeterminate (fetch / model-load — no measurable progress yet) */
+  .bar > i.indet { width: 32%; transition: none; animation: slide 1.3s ease-in-out infinite; }
+  @keyframes slide { 0%{margin-left:-34%} 100%{margin-left:102%} }
+  .pct {
+    font-size: 12px; color: var(--amber); font-variant-numeric: tabular-nums;
+    min-width: 44px; text-align: right; letter-spacing: 0.04em;
+  }
+  .readout { margin-top:18px; font-size:12px; color: var(--ink-dim); text-align:center; min-height: 16px; }
+  .readout b { color: var(--amber); }
+  .marquee { margin-top: 6px; text-align:center; color: var(--ink-faint); font-size:11px; }
+
+  /* ============ CONSOLE ============ */
+  .console { display:none; }
+  .console.show { display:block; }
+
+  .master {
+    display:flex; align-items:center; gap: 18px; padding: 16px 20px; margin-bottom: 16px;
+  }
+  .transport { display:flex; gap:8px; }
+  .tbtn {
+    width: 46px; height: 46px; border-radius: 6px; cursor:pointer;
+    background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+    border:1px solid #000; color: var(--ink); font-size: 16px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 5px rgba(0,0,0,.5);
+    transition: transform .08s;
+  }
+  .tbtn:active { transform: translateY(1px); }
+  .tbtn.play { color: var(--green); font-size: 18px; }
+  .tbtn.play.on { background: linear-gradient(180deg,#1d3a2a,#0f231a); box-shadow: 0 0 14px rgba(70,224,138,.35), inset 0 1px 0 rgba(255,255,255,.07); }
+
+  .clock {
+    font-size: 26px; letter-spacing: 0.06em; color: var(--amber);
+    text-shadow: 0 0 10px rgba(255,107,53,.4); min-width: 142px;
+    font-variant-numeric: tabular-nums;
+  }
+  .clock .sep { opacity:.5; }
+  .clock small { font-size: 11px; color: var(--ink-faint); letter-spacing:0; }
+  .trackname { color: var(--ink-dim); font-size: 11px; letter-spacing: 0.08em; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dlall {
+    padding: 11px 16px; cursor:pointer; font-family:var(--mono); font-size:11px;
+    letter-spacing:0.18em; text-transform:uppercase; color: var(--ink);
+    background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+    border:1px solid #000; border-radius:6px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .dlall:hover { color: var(--amber); }
+
+  /* channel strip */
+  .strip {
+    display:grid; grid-template-columns: 132px 1fr 150px;
+    gap: 16px; align-items:center; padding: 14px 18px; margin-bottom: 12px;
+    --c: var(--amber);
+  }
+  /* explicit placement — the decorative .screw children otherwise perturb auto-flow */
+  .strip > .name        { grid-column: 1; }
+  .strip > .screen-wrap { grid-column: 2; }
+  .strip > .controls    { grid-column: 3; }
+  .strip .name {
+    display:flex; flex-direction:column; gap: 9px;
+  }
+  .strip .name .tab {
+    display:inline-flex; align-items:center; gap:8px; font-size: 14px;
+    text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink);
+  }
+  .strip .name .tab .dot {
+    width:10px;height:10px;border-radius:2px;background:var(--c);
+    box-shadow: 0 0 8px var(--c);
+  }
+  /* peak LED meter */
+  .meter { display:flex; gap:3px; }
+  .meter i {
+    width: 5px; height: 11px; border-radius:1px; background: var(--panel-lo);
+    box-shadow: inset 0 0 0 1px #000;
+  }
+  .meter i.on { background: var(--green); box-shadow: 0 0 4px var(--green); }
+  .meter i.on.mid { background: var(--lime); box-shadow: 0 0 4px var(--lime); }
+  .meter i.on.hot { background: var(--red); box-shadow: 0 0 5px var(--red); }
+
+  /* waveform screen */
+  .screen-wrap {
+    position: relative; height: 72px; border-radius: 5px; overflow:hidden;
+    background: var(--screen); cursor: pointer;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,255,255,0.02);
+  }
+  .screen-wrap canvas { display:block; width:100%; height:100%; }
+  .screen-wrap .scan {
+    position:absolute; inset:0; pointer-events:none;
+    background: repeating-linear-gradient(180deg, transparent 0 2px, rgba(0,0,0,0.18) 2px 3px);
+    opacity: .5;
+  }
+  .strip.muted .screen-wrap { opacity: .32; }
+  .strip.muted .screen-wrap canvas { filter: grayscale(.7); }
+
+  .controls { display:flex; align-items:center; gap: 10px; }
+  .sm { display:flex; flex-direction:column; gap:5px; }
+  .pill {
+    width: 30px; height: 22px; border-radius: 4px; cursor:pointer; font-size:9px;
+    display:flex;align-items:center;justify-content:center; letter-spacing:0.06em;
+    background: var(--panel-lo); border:1px solid #000; color: var(--ink-dim);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05); user-select:none; font-weight:700;
+  }
+  .pill.solo.on { background: var(--cyan); color:#04201d; box-shadow: 0 0 10px rgba(41,211,194,.5); }
+  .pill.mute.on { background: var(--red); color:#2a0605; box-shadow: 0 0 10px rgba(255,59,48,.5); }
+  .fader { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+  .fader input { width: 100%; }
+  .dl {
+    width: 30px; height: 30px; border-radius:5px; cursor:pointer; text-decoration:none;
+    display:flex;align-items:center;justify-content:center; color: var(--ink-dim);
+    background: var(--panel-lo); border:1px solid #000; font-size:14px;
+  }
+  .dl:hover { color: var(--c); }
+
+  /* range slider styling */
+  input[type=range] { -webkit-appearance:none; appearance:none; height: 4px; background: var(--panel-lo); border-radius:2px; box-shadow: inset 0 1px 2px #000; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; appearance:none; width:14px; height:20px; border-radius:3px;
+    background: linear-gradient(180deg,#3a3e44,#1a1c1f); border:1px solid #000; cursor:pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.15);
+  }
+  input[type=range]::-moz-range-thumb {
+    width:14px; height:20px; border-radius:3px; background:#2a2d31; border:1px solid #000; cursor:pointer;
+  }
+
+  .errbox {
+    display:none; margin-top:16px; padding:14px 16px; border:1px solid var(--red);
+    border-radius:6px; background: rgba(255,59,48,0.07); color: #ffb0aa; font-size:12px;
+  }
+  .errbox.show { display:block; }
+
+  .footnote { text-align:center; color: var(--ink-faint); font-size:10px; letter-spacing:0.14em; margin-top:30px; text-transform:uppercase; }
+  .footnote a { color: var(--ink-dim); }
+
+  /* entrance */
+  .reveal { opacity:0; transform: translateY(10px); animation: rise .5s forwards; }
+  @keyframes rise { to { opacity:1; transform:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead reveal">
+    <div class="brand">
+      <span class="wordmark">CH<b>U</b>JA</span>
+      <span class="tagline">stem&nbsp;console</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="tagline">on&nbsp;air</span>
+      <span class="powerled"></span>
+    </div>
+  </div>
+
+  <!-- ================= INTAKE ================= -->
+  <div id="intake" class="panel screws intake reveal" style="animation-delay:.06s">
+    <span class="screw tl"></span><span class="screw tr"></span>
+    <span class="screw bl"></span><span class="screw br"></span>
+    <div class="hdr">
+      <span class="section-id">// input&nbsp;source</span>
+      <span class="section-id" id="engineLbl">engine&nbsp;: htdemucs</span>
+    </div>
+
+    <div id="drop" class="drop">
+      <div class="glyph">⬓</div>
+      <div class="big">DROP AN AUDIO FILE</div>
+      <div class="sub">mp3 · wav · flac · m4a · ogg — or click to browse</div>
+      <input id="file" type="file" accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg,.opus" hidden />
+    </div>
+    <div id="filechip" class="filechip">
+      <span>▣</span><span id="filename"></span><span class="x" id="clearfile">✕</span>
+    </div>
+
+    <div class="or"><span>OR</span></div>
+
+    <div class="urlrow">
+      <input id="url" type="text" placeholder="paste a youtube / soundcloud / direct url…" />
+    </div>
+
+    <div class="opts">
+      <div class="opt">
+        <label>model</label>
+        <div class="segbar" id="modelSeg">
+          <span class="seg on" data-v="htdemucs">htdemucs</span>
+          <span class="seg" data-v="htdemucs_ft">ft · fine</span>
+          <span class="seg" data-v="htdemucs_6s">6-stem</span>
+        </div>
+      </div>
+      <div class="opt">
+        <label>format</label>
+        <div class="segbar" id="fmtSeg">
+          <span class="seg on" data-v="mp3">mp3</span>
+          <span class="seg" data-v="wav">wav</span>
+          <span class="seg" data-v="flac">flac</span>
+        </div>
+      </div>
+      <div class="opt">
+        <label>split</label>
+        <div class="segbar" id="splitSeg">
+          <span class="seg on" data-v="">full · 4</span>
+          <span class="seg" data-v="vocals">karaoke</span>
+        </div>
+      </div>
+    </div>
+
+    <button id="go" class="go">▶ Separate Stems</button>
+    <div id="err" class="errbox"></div>
+  </div>
+
+  <!-- ================= PROGRESS ================= -->
+  <div id="progress" class="panel screws progress">
+    <span class="screw tl"></span><span class="screw tr"></span>
+    <span class="screw bl"></span><span class="screw br"></span>
+    <div class="hdr" style="display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:6px">
+      <span class="section-id">// processing</span>
+      <span class="section-id" id="procName"></span>
+    </div>
+    <div class="stages" id="stages">
+      <div class="stage" data-s="fetching"><div class="led"></div><div class="lbl">fetch</div></div>
+      <div class="stage" data-s="separating"><div class="led"></div><div class="lbl">separate</div></div>
+      <div class="stage" data-s="exporting"><div class="led"></div><div class="lbl">export</div></div>
+    </div>
+    <div class="barrow">
+      <div class="bar"><i class="indet"></i></div>
+      <span class="pct" id="pct"></span>
+    </div>
+    <div class="readout" id="readout">initialising…</div>
+    <div class="marquee">neural separation runs locally — large tracks take a few minutes on cpu</div>
+  </div>
+
+  <!-- ================= CONSOLE ================= -->
+  <div id="console" class="console">
+    <div class="panel screws master reveal">
+      <span class="screw tl"></span><span class="screw tr"></span>
+      <span class="screw bl"></span><span class="screw br"></span>
+      <div class="transport">
+        <div class="tbtn play" id="play" title="play / pause">▶</div>
+        <div class="tbtn" id="stop" title="stop">■</div>
+      </div>
+      <div class="clock"><span id="cur">0:00</span><span class="sep"> / </span><small id="dur">0:00</small></div>
+      <div class="trackname" id="tname"></div>
+      <a class="dlall" id="dlall" href="#" download>⤓ download all</a>
+    </div>
+    <div id="strips"></div>
+    <button id="again" class="dlall" style="margin:18px auto 0;display:block">＋ new separation</button>
+  </div>
+
+  <div class="footnote">chuja · local stem separation · <a href="#" id="reset">reset</a></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   Tiny API client + Web Audio mixing engine.
+   No dependencies. Stems are decoded into AudioBuffers and
+   played from a single AudioContext for sample-accurate sync.
+   ============================================================ */
+
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const fmtTime = t => {
+  if (!isFinite(t)) t = 0;
+  const m = Math.floor(t/60), s = Math.floor(t%60);
+  return m + ":" + String(s).padStart(2,"0");
+};
+
+// stem -> signature color
+const COLORS = { vocals:"#ff6b35", drums:"#29d3c2", bass:"#b56bff", other:"#c6f135", accompaniment:"#7c8590", piano:"#ffd166", guitar:"#06d6a0" };
+const colorFor = (name,i) => COLORS[name] || ["#ff6b35","#29d3c2","#b56bff","#c6f135"][i%4];
+
+// ---------- intake selections ----------
+const opts = { model:"htdemucs", format:"mp3", split:"" };
+let pickedFile = null;
+
+function wireSeg(id, key) {
+  $$("#"+id+" .seg").forEach(seg => seg.onclick = () => {
+    $$("#"+id+" .seg").forEach(s=>s.classList.remove("on"));
+    seg.classList.add("on");
+    opts[key] = seg.dataset.v;
+    $("#engineLbl").textContent = "engine : " + opts.model;
+  });
+}
+wireSeg("modelSeg","model"); wireSeg("fmtSeg","format"); wireSeg("splitSeg","split");
+
+// ---------- file drop ----------
+const drop = $("#drop"), fileInput = $("#file");
+drop.onclick = () => fileInput.click();
+fileInput.onchange = () => { if (fileInput.files[0]) setFile(fileInput.files[0]); };
+["dragover","dragenter"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("hot"); }));
+["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("hot"); }));
+drop.addEventListener("drop", ev => { const f = ev.dataTransfer.files[0]; if (f) setFile(f); });
+function setFile(f) {
+  pickedFile = f;
+  $("#filename").textContent = f.name + "  ·  " + (f.size/1048576).toFixed(1) + " MB";
+  $("#filechip").style.display = "flex";
+  $("#url").value = "";
+}
+$("#clearfile").onclick = () => { pickedFile = null; $("#filechip").style.display="none"; fileInput.value=""; };
+
+// ---------- submit ----------
+const errBox = $("#err");
+function showErr(msg){ errBox.textContent = "⚠ " + msg; errBox.classList.add("show"); }
+function clearErr(){ errBox.classList.remove("show"); }
+
+$("#go").onclick = async () => {
+  clearErr();
+  const url = $("#url").value.trim();
+  if (!pickedFile && !url) { showErr("Drop a file or paste a URL first."); return; }
+  $("#go").disabled = true;
+  try {
+    const id = pickedFile ? await postFile(pickedFile) : await postUrl(url);
+    enterProgress();
+    pollJob(id);
+  } catch (e) {
+    $("#go").disabled = false;
+    showErr(e.message || String(e));
+  }
+};
+
+async function postUrl(url) {
+  const r = await fetch("/api/jobs", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ url, model:opts.model, format:opts.format, two_stems:opts.split||null })
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "request failed");
+  return j.id;
+}
+async function postFile(file) {
+  const r = await fetch("/api/jobs", {
+    method:"POST",
+    headers:{
+      "X-Chuja-Filename": encodeURIComponent(file.name),
+      "X-Chuja-Model": opts.model,
+      "X-Chuja-Format": opts.format,
+      "X-Chuja-Two-Stems": opts.split || "",
+    },
+    body: file
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "upload failed");
+  return j.id;
+}
+
+// ---------- progress ----------
+function enterProgress() {
+  $("#intake").style.display = "none";
+  $("#progress").classList.add("show");
+}
+function setStage(phase) {
+  const order = ["fetching","separating","exporting"];
+  const idx = order.indexOf(phase);
+  $$("#stages .stage").forEach(el => {
+    const i = order.indexOf(el.dataset.s);
+    el.classList.toggle("active", i === idx);
+    el.classList.toggle("done", idx >= 0 && i < idx);
+  });
+}
+function updateBar(j) {
+  const fill = document.querySelector('.bar > i');
+  const pct = $("#pct");
+  if (j.phase === "separating" && j.progress > 0) {
+    // real separation progress, reported per audio chunk by the backend
+    const p = Math.min(100, Math.round(j.progress * 100));
+    fill.classList.remove("indet");
+    fill.style.width = p + "%";
+    pct.textContent = p + "%";
+  } else if (j.phase === "exporting" || j.status === "done") {
+    fill.classList.remove("indet");
+    fill.style.width = "100%";
+    pct.textContent = "100%";
+  } else {
+    // fetching / model-load: no measurable progress — keep it animated
+    fill.classList.add("indet");
+    fill.style.width = "";
+    pct.textContent = "";
+  }
+}
+async function pollJob(id) {
+  try {
+    const r = await fetch("/api/jobs/" + id);
+    const j = await r.json();
+    if (j.message) $("#readout").innerHTML = j.message.replace(/(htdemucs\w*|\d+ stems?)/g, "<b>$1</b>");
+    if (j.track) $("#procName").textContent = j.track;
+    if (j.phase) setStage(j.phase);
+    updateBar(j);
+    if (j.status === "done") { return loadConsole(j); }
+    if (j.status === "error") {
+      $("#progress").classList.remove("show");
+      $("#intake").style.display = "block";
+      $("#go").disabled = false;
+      showErr(j.error || "separation failed");
+      return;
+    }
+    setTimeout(() => pollJob(id), 900);
+  } catch (e) {
+    setTimeout(() => pollJob(id), 1500);
+  }
+}
+
+// ============================================================
+//  MIXING ENGINE
+// ============================================================
+const Engine = {
+  ctx: null, master: null, masterGain: null,
+  channels: [], duration: 0,
+  playing: false, startedAt: 0, offset: 0, raf: 0,
+
+  async load(job) {
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.masterGain = this.ctx.createGain();
+    this.master = this.ctx.createAnalyser(); this.master.fftSize = 256;
+    this.masterGain.connect(this.master); this.master.connect(this.ctx.destination);
+
+    this.channels = await Promise.all(job.stems.map(async (st, i) => {
+      const buf = await fetch(st.url).then(r=>r.arrayBuffer()).then(a=>this.ctx.decodeAudioData(a));
+      const gain = this.ctx.createGain();
+      const an = this.ctx.createAnalyser(); an.fftSize = 256;
+      gain.connect(an); an.connect(this.masterGain);
+      return { name: st.name, url: st.url, buffer: buf, gain, analyser: an,
+               volume: 1, solo:false, mute:false, source:null, color: colorFor(st.name,i),
+               freq: new Uint8Array(an.frequencyBinCount), el:null, meterEls:null };
+    }));
+    this.duration = Math.max(...this.channels.map(c=>c.buffer.duration));
+    // NB: don't applyGains() here — channel DOM (c.el) isn't built until
+    // loadConsole() runs after this; it calls applyGains() once strips exist.
+  },
+
+  applyGains() {
+    const anySolo = this.channels.some(c=>c.solo);
+    this.channels.forEach(c => {
+      const audible = c.mute ? false : (anySolo ? c.solo : true);
+      c.gain.gain.value = audible ? c.volume : 0;
+      if (c.el) c.el.classList.toggle("muted", !audible);
+    });
+  },
+
+  play() {
+    if (this.playing) return;
+    if (this.ctx.state === "suspended") this.ctx.resume();
+    if (this.offset >= this.duration - 0.02) this.offset = 0;
+    this.channels.forEach(c => {
+      const src = this.ctx.createBufferSource();
+      src.buffer = c.buffer; src.connect(c.gain);
+      src.start(0, this.offset); c.source = src;
+    });
+    this.startedAt = this.ctx.currentTime;
+    this.playing = true;
+    $("#play").classList.add("on"); $("#play").textContent = "❚❚";
+    this.tick();
+  },
+  pause() {
+    if (!this.playing) return;
+    this.offset = this.position();
+    this.channels.forEach(c => { try{c.source.stop()}catch(e){} c.source=null; });
+    this.playing = false;
+    $("#play").classList.remove("on"); $("#play").textContent = "▶";
+    cancelAnimationFrame(this.raf);
+    this.drawMeters(true);
+  },
+  stop() { this.pause(); this.offset = 0; this.updateClock(); this.drawPlayheads(); },
+  toggle() { this.playing ? this.pause() : this.play(); },
+  position() { return this.playing ? Math.min(this.offset + (this.ctx.currentTime - this.startedAt), this.duration) : this.offset; },
+  seek(t) {
+    const was = this.playing;
+    if (was) this.pause();
+    this.offset = Math.max(0, Math.min(t, this.duration));
+    if (was) this.play(); else { this.updateClock(); this.drawPlayheads(); }
+  },
+
+  tick() {
+    const pos = this.position();
+    this.updateClock();
+    this.drawPlayheads();
+    this.drawMeters();
+    if (pos >= this.duration - 0.02) { this.stop(); return; }
+    this.raf = requestAnimationFrame(()=>this.tick());
+  },
+  updateClock() { $("#cur").textContent = fmtTime(this.position()); },
+
+  drawPlayheads() {
+    const frac = this.duration ? this.position()/this.duration : 0;
+    this.channels.forEach(c => { if (c.drawWave) c.drawWave(frac); });
+  },
+  drawMeters(reset) {
+    this.channels.forEach(c => {
+      let level = 0;
+      if (!reset && this.playing) {
+        c.analyser.getByteFrequencyData(c.freq);
+        let sum=0; for (let i=0;i<c.freq.length;i++) sum += c.freq[i]*c.freq[i];
+        level = Math.sqrt(sum/c.freq.length)/255; // 0..1 rms
+      }
+      const lit = Math.round(level * c.meterEls.length * 1.6);
+      c.meterEls.forEach((el,i) => {
+        const on = i < lit;
+        el.classList.toggle("on", on);
+        el.classList.toggle("mid", on && i >= c.meterEls.length*0.5 && i < c.meterEls.length*0.8);
+        el.classList.toggle("hot", on && i >= c.meterEls.length*0.8);
+      });
+    });
+  },
+};
+
+// ---------- build console DOM ----------
+async function loadConsole(job) {
+  $("#progress").classList.remove("show");
+  $("#tname").textContent = job.track || "";
+  $("#dlall").href = job.archive_url || "#";
+  if (!job.archive_url) $("#dlall").style.display = "none";
+
+  await Engine.load(job);
+  $("#dur").textContent = fmtTime(Engine.duration);
+
+  const host = $("#strips"); host.innerHTML = "";
+  Engine.channels.forEach((c, i) => {
+    const el = document.createElement("div");
+    el.className = "panel screws strip reveal";
+    el.style.setProperty("--c", c.color);
+    el.style.animationDelay = (0.05 * i) + "s";
+    el.innerHTML = `
+      <span class="screw tl"></span><span class="screw br"></span>
+      <div class="name">
+        <span class="tab"><span class="dot"></span>${c.name}</span>
+        <span class="meter">${'<i></i>'.repeat(12)}</span>
+      </div>
+      <div class="screen-wrap"><canvas></canvas><div class="scan"></div></div>
+      <div class="controls">
+        <div class="sm">
+          <span class="pill solo">S</span>
+          <span class="pill mute">M</span>
+        </div>
+        <div class="fader">
+          <input type="range" min="0" max="1.4" step="0.01" value="1" />
+        </div>
+        <a class="dl" href="${c.url}" download title="download ${c.name}">⤓</a>
+      </div>`;
+    host.appendChild(el);
+    c.el = el;
+    c.meterEls = $$(".meter i", el);
+
+    // solo / mute
+    const soloBtn = $(".pill.solo", el), muteBtn = $(".pill.mute", el);
+    soloBtn.onclick = () => { c.solo=!c.solo; soloBtn.classList.toggle("on",c.solo); Engine.applyGains(); };
+    muteBtn.onclick = () => { c.mute=!c.mute; muteBtn.classList.toggle("on",c.mute); Engine.applyGains(); };
+    // volume
+    $(".fader input", el).oninput = e => { c.volume = parseFloat(e.target.value); Engine.applyGains(); };
+
+    // waveform
+    const canvas = $("canvas", el);
+    setupWave(c, canvas, el);
+    $(".screen-wrap", el).onclick = ev => {
+      const rect = ev.currentTarget.getBoundingClientRect();
+      Engine.seek(((ev.clientX-rect.left)/rect.width) * Engine.duration);
+    };
+  });
+
+  Engine.applyGains();
+  Engine.drawPlayheads();
+  $("#console").classList.add("show");
+}
+
+// ---------- waveform render (peaks from AudioBuffer) ----------
+function setupWave(ch, canvas, el) {
+  const dpr = window.devicePixelRatio || 1;
+  let peaks = null, W=0, H=0;
+  function computePeaks(width) {
+    const data = ch.buffer.getChannelData(0);
+    const step = Math.floor(data.length / width) || 1;
+    const out = new Float32Array(width);
+    for (let i=0;i<width;i++){
+      let max=0; const s=i*step, e=Math.min(s+step,data.length);
+      for (let j=s;j<e;j++){ const v=Math.abs(data[j]); if(v>max)max=v; }
+      out[i]=max;
+    }
+    return out;
+  }
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    W = Math.max(1, Math.floor(r.width)); H = Math.floor(r.height);
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    peaks = computePeaks(W);
+    ch.drawWave(Engine.duration ? Engine.position()/Engine.duration : 0);
+  }
+  ch.drawWave = (frac) => {
+    if (!peaks) return;
+    const cx = canvas.getContext("2d");
+    cx.save(); cx.scale(dpr,dpr);
+    cx.clearRect(0,0,W,H);
+    const mid = H/2, playX = frac*W;
+    for (let i=0;i<W;i++){
+      const h = Math.max(1, peaks[i]*(H*0.92));
+      cx.fillStyle = i <= playX ? ch.color : "rgba(120,128,138,0.32)";
+      cx.fillRect(i, mid-h/2, 1, h);
+    }
+    // playhead
+    cx.fillStyle = "#fff"; cx.globalAlpha = 0.85;
+    cx.fillRect(playX, 0, 1, H);
+    cx.globalAlpha = 1;
+    cx.restore();
+  };
+  // observe size
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
+  resize();
+}
+
+// ---------- transport buttons ----------
+$("#play").onclick = () => Engine.toggle();
+$("#stop").onclick = () => Engine.stop();
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && $("#console").classList.contains("show") &&
+      e.target.tagName !== "INPUT") { e.preventDefault(); Engine.toggle(); }
+});
+
+// ---------- reset / again ----------
+function reset() { location.reload(); }
+$("#again").onclick = reset;
+$("#reset").onclick = e => { e.preventDefault(); reset(); };
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chuja"
+version = "0.1.0"
+description = "Separate a song into stems (vocals/drums/bass/other) from a local file — or, opt-in, from a URL."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Daniel Nakitare" }]
+keywords = ["stems", "source-separation", "demucs", "audio", "music", "vocals", "karaoke"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+
+# Core stays deliberately lean and legally unambiguous: separate a LOCAL file.
+dependencies = [
+    "demucs>=4.0.0",
+    "soundfile>=0.12.0",
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+# URL ingestion (YouTube/SoundCloud/etc.) is opt-in. You are responsible for
+# complying with each platform's Terms of Service and applicable copyright law.
+url = ["yt-dlp>=2024.1.1"]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+chuja = "chuja.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/dnakitare/chuja"
+Issues = "https://github.com/dnakitare/chuja/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chuja"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/chuja/web/console.html" = "chuja/web/console.html"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
