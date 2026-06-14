@@ -1,8 +1,10 @@
 # chuja
 
+[![CI](https://github.com/Dnakitare/chuja/actions/workflows/ci.yml/badge.svg)](https://github.com/Dnakitare/chuja/actions/workflows/ci.yml)
+
 Separate a song into its stems — **vocals, drums, bass, other** — from a local
 audio file, or (opt-in) from a YouTube / SoundCloud / direct URL. One command,
-portable output, cross-platform.
+portable output.
 
 ![chuja mixing console](docs/03-console.png)
 
@@ -135,6 +137,12 @@ separation, so it never throws away quality you started with.
 Performance: separation is compute-heavy. It runs on CPU everywhere, and uses
 your GPU automatically when available — **CUDA** (NVIDIA) or **MPS** (Apple
 Silicon). GPU is many times faster than CPU for full songs.
+
+> **Platform note:** developed and tested on **macOS** (CPU and Apple
+> Silicon/MPS). The code is written to be cross-platform — its dependencies
+> (Demucs/PyTorch, soundfile, ffmpeg) all ship for Linux and Windows — but
+> separation hasn't been exercised on those yet. CI runs the test suite on
+> Linux. Reports from other platforms are welcome.
 
 ## Responsible use
 
