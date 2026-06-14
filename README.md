@@ -6,7 +6,7 @@ Separate a song into its stems — **vocals, drums, bass, other** — from a loc
 audio file, or (opt-in) from a YouTube / SoundCloud / direct URL. One command,
 portable output.
 
-![chuja mixing console](docs/03-console.png)
+![chuja mixing console](https://raw.githubusercontent.com/Dnakitare/chuja/main/docs/03-console.png)
 
 > *The `chuja serve` mixing console — one channel strip per stem with a live
 > waveform, solo/mute, faders, and sample-accurate synced playback.*
@@ -26,11 +26,11 @@ polished CLI + Python API.
 
 **Intake** — drop a file or paste a URL, pick a model / format / split:
 
-![chuja intake screen](docs/01-intake.png)
+![chuja intake screen](https://raw.githubusercontent.com/Dnakitare/chuja/main/docs/01-intake.png)
 
 **Progress** — a real, per-chunk separation progress bar (not a fake spinner):
 
-![chuja separation progress](docs/02-progress.png)
+![chuja separation progress](https://raw.githubusercontent.com/Dnakitare/chuja/main/docs/02-progress.png)
 
 **Console** — the per-stem mixing board shown at the top of this README.
 
