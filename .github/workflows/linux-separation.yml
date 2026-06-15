@@ -1,0 +1,49 @@
+name: Linux separation smoke test
+
+# Manually-triggered real-separation test on Linux (the per-push CI mocks the ML
+# stack to stay fast; this one actually runs Demucs end-to-end). Kept as
+# workflow_dispatch so it never burns minutes automatically.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  separate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install chuja (CPU-only torch to keep it light)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install .
+
+      - name: Generate a 6s test clip
+        run: |
+          ffmpeg -y -f lavfi -i "sine=frequency=220:duration=6" \
+                 -f lavfi -i "sine=frequency=660:duration=6" \
+                 -filter_complex "[0][1]amix=inputs=2[a]" -map "[a]" \
+                 -ac 2 -ar 44100 /tmp/test_tone.wav
+
+      - name: Separate (CPU)
+        run: chuja separate /tmp/test_tone.wav -o /tmp/out -f wav --device cpu -q
+
+      - name: Verify 4 valid stems were produced
+        run: |
+          set -e
+          ls -la /tmp/out/test_tone/
+          for s in drums bass other vocals; do
+            f="/tmp/out/test_tone/$s.wav"
+            test -f "$f" || { echo "MISSING: $f"; exit 1; }
+            ffprobe -v error -show_entries stream=codec_name,sample_rate,channels,duration \
+                    -of csv=p=0 "$f"
+          done
+          echo "✓ Linux separation produced 4 valid stems"
