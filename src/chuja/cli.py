@@ -65,6 +65,7 @@ def separate(
     mp3_bitrate: int = typer.Option(320, "--mp3-bitrate", help="kbps for mp3 export."),
     zip_output: bool = typer.Option(False, "--zip", help="Also bundle the stems into a portable .zip."),
     device: Optional[str] = typer.Option(None, "--device", help="Force a torch device: cpu, cuda, or mps."),
+    open_folder: bool = typer.Option(False, "--open", "-O", help="Reveal the output folder in your file manager when done."),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress the banner and progress chatter."),
 ):
     """Separate SOURCE into stems."""
@@ -88,19 +89,55 @@ def separate(
         raise typer.Exit(code=130)
 
     _print_result(result, fmt)
+    if open_folder:
+        _reveal(result.out_dir)
+
+
+def _reveal_command() -> str:
+    """The platform-native 'open this folder' command, for the copy-paste hint."""
+    if sys.platform == "darwin":
+        return "open"
+    if sys.platform.startswith("win"):
+        return "explorer"
+    return "xdg-open"
+
+
+def _reveal(path: Path) -> bool:
+    """Open a folder in the OS file manager. Best-effort; never raises."""
+    import subprocess
+
+    target = str(Path(path).resolve())
+    try:
+        if sys.platform.startswith("win"):
+            import os
+            os.startfile(target)  # type: ignore[attr-defined]
+        else:
+            subprocess.run([_reveal_command(), target], check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except Exception:
+        return False
 
 
 def _print_result(result, fmt):
+    out_dir = Path(result.out_dir).resolve()
     body = Text()
-    body.append(f"{result.track}\n", style="bold #ff6b35")
+    body.append(f"{result.track}\n\n", style="bold #ff6b35")
+    # The folder, front and center — absolute so it's unambiguous and clickable.
+    body.append("folder  ", style="#767c85")
+    body.append(f"{out_dir}\n", style="bold #d7dbe0")
     for name, path in result.stems.items():
-        body.append(f"  {name:<13}", style="#29d3c2")
-        body.append(f"{path}\n", style="dim")
+        body.append(f"        {name:<13}", style="#29d3c2")
+        body.append(f"{Path(path).name}\n", style="dim")
     if result.archive:
-        body.append(f"  {'archive':<13}", style="#b56bff")
-        body.append(str(result.archive), style="dim")
+        body.append("        ", style="")
+        body.append(f"{'zip':<13}", style="#b56bff")
+        body.append(f"{Path(result.archive).name}\n", style="dim")
+    body.append("\nreveal  ", style="#767c85")
+    body.append(f'{_reveal_command()} "{out_dir}"', style="#29d3c2")
     console.print()
     console.print(Panel(body, title=f"[bold green]✓ {len(result.stems)} stems · {fmt}[/]",
+                        subtitle="[dim]rerun with --open to jump straight to the folder[/]",
                         border_style="#34383e", expand=False))
 
 
@@ -230,6 +267,8 @@ def interactive():
         err_console.print(f"\n[bold red]✗ Error:[/] {exc}")
         raise typer.Exit(code=1)
     _print_result(result, fmt)
+    if Prompt.ask("  reveal the folder?", choices=["y", "n"], default="y") == "y":
+        _reveal(result.out_dir)
 
 
 @app.callback(invoke_without_command=True)

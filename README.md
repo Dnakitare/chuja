@@ -153,6 +153,24 @@ you have the right to download and process any audio you give to `chuja`
 (e.g. your own recordings, public-domain works, or content you are licensed to
 use). The core install ships *without* this capability for exactly this reason.
 
+## Releasing (maintainers)
+
+Releases publish to PyPI via **Trusted Publishing** (OIDC) — no API token is
+ever stored. One-time setup on PyPI
+([Publishing settings](https://pypi.org/manage/account/publishing/) → add a
+*pending publisher*):
+
+| Field | Value |
+| --- | --- |
+| PyPI project name | `chuja` |
+| Owner | `Dnakitare` |
+| Repository name | `chuja` |
+| Workflow name | `release.yml` |
+| Environment name | `pypi` |
+
+Then publish a version by cutting a GitHub Release (e.g. tag `v0.1.0`). The
+`release.yml` workflow builds the sdist + wheel and uploads them automatically.
+
 ## License
 
 MIT.
