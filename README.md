@@ -1,6 +1,7 @@
 # chuja
 
 [![CI](https://github.com/Dnakitare/chuja/actions/workflows/ci.yml/badge.svg)](https://github.com/Dnakitare/chuja/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/chuja.svg)](https://pypi.org/project/chuja/)
 
 Separate a song into its stems — **vocals, drums, bass, other** — from a local
 audio file, or (opt-in) from a YouTube / SoundCloud / direct URL. One command,
@@ -38,17 +39,12 @@ polished CLI + Python API.
 
 ## Install
 
-Install from source (not yet published to PyPI):
-
 ```bash
-git clone https://github.com/dnakitare/chuja
-cd chuja
-
 # Core: separate LOCAL files. Pulls in Demucs (PyTorch).
-pip install .
+pip install chuja
 
 # Optional: add URL ingestion (YouTube/SoundCloud/etc.)
-pip install '.[url]'
+pip install 'chuja[url]'
 ```
 
 ### Install globally (run `chuja` from anywhere)
