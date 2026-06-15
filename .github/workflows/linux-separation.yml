@@ -23,7 +23,10 @@ jobs:
       - name: Install chuja (CPU-only torch to keep it light)
         run: |
           python -m pip install --upgrade pip
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          # torch AND torchaudio from the same CPU index so their native ABIs
+          # match (installing only torch here, then torchaudio from PyPI, breaks
+          # _torchaudio.abi3.so loading).
+          pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install .
 
       - name: Generate a 6s test clip
