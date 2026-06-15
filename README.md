@@ -136,7 +136,7 @@ Silicon). GPU is many times faster than CPU for full songs.
 
 > **Platform note:** developed on **macOS** (CPU + Apple Silicon/MPS), and real
 > separation is **verified on Linux** (Ubuntu, CPU) via CI — see the
-> [Linux separation smoke test](https://github.com/Dnakitare/chuja/actions/workflows/linux-separation.yml).
+> [separation smoke test](https://github.com/Dnakitare/chuja/actions/workflows/separation-smoke.yml).
 > **Windows** isn't exercised yet, though its dependencies (Demucs/PyTorch,
 > soundfile, ffmpeg) all ship there. Reports from Windows users welcome.
 

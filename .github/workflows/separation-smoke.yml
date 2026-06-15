@@ -1,7 +1,7 @@
-name: Linux separation smoke test
+name: Separation smoke test
 
-# Manually-triggered real-separation test on Linux (the per-push CI mocks the ML
-# stack to stay fast; this one actually runs Demucs end-to-end). Kept as
+# Manually-triggered real-separation test on Linux and Windows (the per-push CI
+# mocks the ML stack to stay fast; this one actually runs Demucs end-to-end).
 # workflow_dispatch so it never burns minutes automatically.
 
 on:
@@ -9,7 +9,14 @@ on:
 
 jobs:
   separate:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash          # reuse the same script on Windows (Git Bash)
     steps:
       - uses: actions/checkout@v6
 
@@ -17,15 +24,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install ffmpeg
+      - name: Ensure ffmpeg (Linux)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Ensure ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: command -v ffmpeg || choco install ffmpeg -y --no-progress
 
       - name: Install chuja (CPU-only torch to keep it light)
         run: |
           python -m pip install --upgrade pip
-          # torch AND torchaudio from the same CPU index so their native ABIs
-          # match (installing only torch here, then torchaudio from PyPI, breaks
-          # _torchaudio.abi3.so loading).
+          # torch + torchaudio from the same CPU index so their native ABIs match.
           pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install .
 
@@ -34,19 +44,19 @@ jobs:
           ffmpeg -y -f lavfi -i "sine=frequency=220:duration=6" \
                  -f lavfi -i "sine=frequency=660:duration=6" \
                  -filter_complex "[0][1]amix=inputs=2[a]" -map "[a]" \
-                 -ac 2 -ar 44100 /tmp/test_tone.wav
+                 -ac 2 -ar 44100 stem-test.wav
 
       - name: Separate (CPU)
-        run: chuja separate /tmp/test_tone.wav -o /tmp/out -f wav --device cpu -q
+        run: chuja separate stem-test.wav -o out -f wav --device cpu -q
 
       - name: Verify 4 valid stems were produced
         run: |
           set -e
-          ls -la /tmp/out/test_tone/
+          ls -la out/stem-test/
           for s in drums bass other vocals; do
-            f="/tmp/out/test_tone/$s.wav"
+            f="out/stem-test/$s.wav"
             test -f "$f" || { echo "MISSING: $f"; exit 1; }
             ffprobe -v error -show_entries stream=codec_name,sample_rate,channels,duration \
                     -of csv=p=0 "$f"
           done
-          echo "✓ Linux separation produced 4 valid stems"
+          echo "✓ ${{ matrix.os }} separation produced 4 valid stems"
