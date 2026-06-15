@@ -21,6 +21,16 @@ from .errors import ChujaError
 from .pipeline import separate as run_separate
 from .separator import DEFAULT_MODEL, MODELS
 
+# Windows consoles often default to cp1252, which can't encode the UI glyphs
+# (✓, box-drawing, the banner blocks) and raises UnicodeEncodeError mid-output.
+# Force UTF-8 so output never crashes regardless of the host console. Must run
+# before the Console objects below read the stream encoding.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    except (AttributeError, ValueError):
+        pass
+
 console = Console()
 err_console = Console(stderr=True)
 
