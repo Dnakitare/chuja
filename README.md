@@ -134,11 +134,11 @@ Performance: separation is compute-heavy. It runs on CPU everywhere, and uses
 your GPU automatically when available — **CUDA** (NVIDIA) or **MPS** (Apple
 Silicon). GPU is many times faster than CPU for full songs.
 
-> **Platform note:** developed and tested on **macOS** (CPU and Apple
-> Silicon/MPS). The code is written to be cross-platform — its dependencies
-> (Demucs/PyTorch, soundfile, ffmpeg) all ship for Linux and Windows — but
-> separation hasn't been exercised on those yet. CI runs the test suite on
-> Linux. Reports from other platforms are welcome.
+> **Platform note:** developed on **macOS** (CPU + Apple Silicon/MPS), and real
+> separation is **verified on Linux** (Ubuntu, CPU) via CI — see the
+> [Linux separation smoke test](https://github.com/Dnakitare/chuja/actions/workflows/linux-separation.yml).
+> **Windows** isn't exercised yet, though its dependencies (Demucs/PyTorch,
+> soundfile, ffmpeg) all ship there. Reports from Windows users welcome.
 
 ## Responsible use
 
