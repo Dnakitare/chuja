@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chuja"
-version = "0.1.1"
+version = "0.1.2"
 description = "Separate a song into stems (vocals/drums/bass/other) from a local file — or, opt-in, from a URL."
 readme = "README.md"
 requires-python = ">=3.9"
