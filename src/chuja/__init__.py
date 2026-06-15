@@ -17,7 +17,7 @@ from .errors import (
 from .pipeline import Result, separate
 from .separator import MODELS
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "separate",
